@@ -28,12 +28,19 @@ var Article = React.createClass({
     WikiPoetryStore.removeChangeListener(this._onChange);
   },
 
+  newPoem: function () {
+    this.setState({
+      type: WikiPoetryStore.getType()
+    })
+  },
+
   render: function () {
     var newInfo = this.props.location.state;
     var articleType = this.state.type;
     
     return (
       <div className="ten columns" id="article">
+        <button onClick={this.newPoem}>Get a new poem</button>
         <div className="article-container">
           <h3 className="article-title">{newInfo.term}</h3>
           <ArticleImage picture={newInfo.picture} />

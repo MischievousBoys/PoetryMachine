@@ -191,7 +191,7 @@ var Article = React.createClass({displayName: "Article",
   getInitialState: function () {
     return {
       term: WikiPoetryStore.getTerm(),
-      type: WikiPoetryStore.getType(),
+      type: WikiPoetryStore.getType()
     }
   },
 
@@ -203,12 +203,19 @@ var Article = React.createClass({displayName: "Article",
     WikiPoetryStore.removeChangeListener(this._onChange);
   },
 
+  newPoem: function () {
+    this.setState({
+      type: WikiPoetryStore.getType()
+    })
+  },
+
   render: function () {
     var newInfo = this.props.location.state;
     var articleType = this.state.type;
     
     return (
       React.createElement("div", {className: "ten columns", id: "article"}, 
+        React.createElement("button", {onClick: this.newPoem}, "Get a new poem"), 
         React.createElement("div", {className: "article-container"}, 
           React.createElement("h3", {className: "article-title"}, newInfo.term), 
           React.createElement(ArticleImage, {picture: newInfo.picture}), 
@@ -11085,6 +11092,7 @@ var keyMirror = function(obj) {
     ret[key] = key;
   }
   return ret;
+
 };
 
 module.exports = keyMirror;
