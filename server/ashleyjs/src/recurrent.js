@@ -132,6 +132,7 @@ var R = {}; // the Recurrent library
       // pluck a row of m with index ix and return it as col vector
       // console.log('in row pluck');
       // console.log(m.n);
+
       assert(ix >= 0 && ix < m.n);
       var d = m.d;
       var out = new Mat(d, 1);
