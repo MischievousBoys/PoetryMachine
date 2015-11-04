@@ -226,17 +226,23 @@ var getArticle = function(searchTerm, cb) {
   // get picture and 3 subheadings of article 
   var article = {
     headings: [],
-    picture: ''
+    picture: '',
+    text: ''
   };
-  wiki.page.data(searchTerm, {content: true}, function(response) {
-    $ = cheerio.load(response.text['*']);
-    getHeaders(function(headings) {
-      article.headings = headings;
-      getPicture(function(picture) {
-        article.picture = picture;
-        cb(article);
+  wiki.page.data(searchTerm, {content: true, redirects: true}, function(response) {
+    if (response === undefined) {
+      article.text = 'Page "' + searchTerm + '" does not exist.'
+      cb(article);
+    } else {
+      $ = cheerio.load(response.text['*']);
+      getHeaders(function(headings) {
+        article.headings = headings;
+        getPicture(function(picture) {
+          article.picture = picture;
+          cb(article);
+        });
       });
-    });
+    }
   });
 };
 

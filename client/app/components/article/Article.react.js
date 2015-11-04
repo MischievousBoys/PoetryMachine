@@ -6,6 +6,7 @@ var ReactRouter = require('react-router');
 var ArticleSubsection = require('./ArticleSubsection.react');
 var ArticleImage = require('./ArticleImage.react');
 var ArticleIntro = require('./ArticleIntro.react');
+var ArticleRedirect = require('./ArticleRedirect.react');
 var WikiPoetryStore = require('../../stores/WikiPoetryStore');
 var API = require('../../api/wikiApi');
 
@@ -31,13 +32,21 @@ var Article = React.createClass({
   render: function () {
     var newInfo = this.props.location.state;
     var articleType = this.state.type;
+    var articleIntro;
+
+    if (newInfo.text) {
+      //Page does not exist
+      articleIntro = <ArticleRedirect text={newInfo.text}/>;
+    } else {
+      articleIntro = <ArticleIntro term={newInfo.term} type={articleType} />;
+    }
     
     return (
       <div className="ten columns" id="article">
         <div className="article-container">
           <h3 className="article-title">{newInfo.term}</h3>
           <ArticleImage picture={newInfo.picture} />
-          <ArticleIntro term={newInfo.term} type={articleType}/>
+          {articleIntro}
           {newInfo.headings.map(function (heading, i) {
             return (
               <ArticleSubsection
