@@ -76,11 +76,15 @@ exports.getArticlePage = function (type, term, callback) {
     type: 'GET',
     data: {type: type, term: term},
     success: function(data) {
-      exports.getArticle({type: type, term: term}, function (articleData) {
-        data.poem = articleData.poem;
-        data.replaced = articleData.replaced;
+      if (data.text) {
         callback(data);
-      })
+      } else {
+        exports.getArticle({type: type, term: term}, function (articleData) {
+          data.poem = articleData.poem;
+          data.replaced = articleData.replaced;
+          callback(data);
+        });
+      }
     },
     error: function(xhr, status, err) {
       console.log(status) ;
@@ -120,7 +124,7 @@ exports.getArticle = function (json, callback) {
     error: function(xhr, status, err) {
       console.log(status) ;
       console.log(err.toString());
-      console.log(xhr)
+      console.log(xhr);
     }
   });
 };
@@ -159,7 +163,6 @@ var Navbar = React.createClass({displayName: "Navbar",
         React.createElement("ul", null, 
           React.createElement("li", null, React.createElement(Link, {to: "/", activeClassName: "link-active"}, React.createElement("img", {src: "images/wp_logo.jpg"}))), 
           React.createElement("li", null, React.createElement(Link, {to: "/", activeClassName: "link-active"}, "Home")), 
-          React.createElement("li", null, React.createElement(Link, {to: "/HowItWorks", activeClassName: "link-active"}, "How It Works")), 
           React.createElement("li", null, React.createElement(Link, {to: "/AboutUs", activeClassName: "link-active"}, "About Us")), 
           React.createElement("li", null, React.createElement(Link, {to: "/Login", activeClassName: "link-active"}, "Login")), 
           React.createElement("li", null, React.createElement(Link, {to: "/Signup", activeClassName: "link-active"}, "Signup"))
@@ -172,7 +175,7 @@ var Navbar = React.createClass({displayName: "Navbar",
 
 module.exports = Navbar;
 
-},{"./cartridge/Cartridge.react":14,"react":240,"react-router":59}],6:[function(require,module,exports){
+},{"./cartridge/Cartridge.react":15,"react":240,"react-router":59}],6:[function(require,module,exports){
 //Components are like Views
 //Top level app view
 var React = require('react');
@@ -227,6 +230,7 @@ var ReactRouter = require('react-router');
 var ArticleSubsection = require('./ArticleSubsection.react');
 var ArticleImage = require('./ArticleImage.react');
 var ArticleIntro = require('./ArticleIntro.react');
+var ArticleRedirect = require('./ArticleRedirect.react');
 var WikiPoetryStore = require('../../stores/WikiPoetryStore');
 var API = require('../../api/wikiApi');
 
@@ -252,13 +256,21 @@ var Article = React.createClass({displayName: "Article",
   render: function () {
     var newInfo = this.props.location.state;
     var articleType = this.state.type;
+    var articleIntro;
+
+    if (newInfo.text) {
+      //Page does not exist
+      articleIntro = React.createElement(ArticleRedirect, {text: newInfo.text});
+    } else {
+      articleIntro = React.createElement(ArticleIntro, {term: newInfo.term, type: articleType});
+    }
     
     return (
       React.createElement("div", {className: "ten columns", id: "article"}, 
         React.createElement("div", {className: "article-container"}, 
           React.createElement("h3", {className: "article-title"}, newInfo.term), 
-          React.createElement(ArticleImage, {picture: newInfo.picture}), 
-          React.createElement(ArticleIntro, {term: newInfo.term, type: articleType}), 
+          React.createElement(ArticleImage, {picture: newInfo.picture, pictureCaption: newInfo.pictureCaption}), 
+          articleIntro, 
           newInfo.headings.map(function (heading, i) {
             return (
               React.createElement(ArticleSubsection, {
@@ -282,7 +294,7 @@ var Article = React.createClass({displayName: "Article",
 
 module.exports = Article;
 
-},{"../../api/wikiApi":3,"../../stores/WikiPoetryStore":30,"./ArticleImage.react":9,"./ArticleIntro.react":10,"./ArticleSubsection.react":11,"react":240,"react-router":59}],9:[function(require,module,exports){
+},{"../../api/wikiApi":3,"../../stores/WikiPoetryStore":30,"./ArticleImage.react":9,"./ArticleIntro.react":10,"./ArticleRedirect.react":11,"./ArticleSubsection.react":12,"react":240,"react-router":59}],9:[function(require,module,exports){
 var React = require('react');
 
 var ArticleImage = React.createClass({displayName: "ArticleImage",
@@ -290,9 +302,11 @@ var ArticleImage = React.createClass({displayName: "ArticleImage",
   render: function () {
 
     var picture = this.props.picture;
+    var caption = this.props.pictureCaption;
     return (
       React.createElement("div", {className: "imgContainer u-pull-right"}, 
-        React.createElement("img", {src: 'http://' + picture})
+        React.createElement("img", {src: 'http://' + picture}), 
+        React.createElement("p", {className: "caption"}, caption)
       )
     );
   }
@@ -394,6 +408,49 @@ module.exports = ArticleIntro;
 
 },{"../../actions/WikiPoetryActionCreators":1,"../../api/wikiApi":3,"../../stores/WikiPoetryStore":30,"react":240,"react-router":59}],11:[function(require,module,exports){
 var React = require('react');
+var ReactRouter = require('react-router');
+
+var Article = require('./Article.react');
+var WikiPoetryStore = require('../../stores/WikiPoetryStore');
+var API = require('./../../api/wikiApi');
+
+var ArticleRedirect = React.createClass({displayName: "ArticleRedirect",
+  mixins: [ReactRouter.History],
+
+  getInitialState: function () {
+    return {
+      type: WikiPoetryStore.getType()
+    }
+  },
+
+  handleClick: function (event) {
+    var word = this.refs.love.innerText;
+    console.log(word);
+
+    API.getArticlePage(this.state.type, word, function (data) {
+      data.term = word;
+      this.history.pushState(data, '/Article/' + word, null );
+    }.bind(this));
+  },
+
+  render: function () {
+
+    return (
+      React.createElement("div", null, 
+        React.createElement("h4", null, this.props.text), 
+        React.createElement("h5", {id: "test"}, " Try this recommended post instead! "), 
+        React.createElement("ul", null, 
+          React.createElement("li", null, React.createElement("a", {href: "/#/Article", onClick: this.handleClick, activeClassName: "link-active", ref: "love"}, "Love"))
+        )
+      )
+    );
+  }
+});
+
+module.exports = ArticleRedirect;
+
+},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"./Article.react":8,"react":240,"react-router":59}],12:[function(require,module,exports){
+var React = require('react');
 var API = require('../../api/wikiApi');
 var WikiPoetryStore = require('../../stores/WikiPoetryStore');
 var WikiPoetryActionCreators = require('../../actions/WikiPoetryActionCreators');
@@ -484,7 +541,7 @@ var ArticleSubsection = React.createClass({displayName: "ArticleSubsection",
 
 module.exports = ArticleSubsection;
 
-},{"../../actions/WikiPoetryActionCreators":1,"../../api/wikiApi":3,"../../stores/WikiPoetryStore":30,"react":240,"react-router":59}],12:[function(require,module,exports){
+},{"../../actions/WikiPoetryActionCreators":1,"../../api/wikiApi":3,"../../stores/WikiPoetryStore":30,"react":240,"react-router":59}],13:[function(require,module,exports){
 var React = require('react');
 var WikiPoetryActionCreators = require('../../actions/WikiPoetryActionCreators');
 var ReactRouter = require('react-router');
@@ -510,7 +567,6 @@ var Login = React.createClass({displayName: "Login",
       // put jwt in localStorage
       window.localStorage.setItem('user', jwt);
       // redirect to homepage
-      console.log(this);
       this.history.pushState(null, '/', null );
       // call login actions 
       WikiPoetryActionCreators.login(jwt);
@@ -536,7 +592,7 @@ var Login = React.createClass({displayName: "Login",
 
 module.exports = Login;
 
-},{"../../actions/WikiPoetryActionCreators":1,"./../../api/login":2,"react":240,"react-router":59}],13:[function(require,module,exports){
+},{"../../actions/WikiPoetryActionCreators":1,"./../../api/login":2,"react":240,"react-router":59}],14:[function(require,module,exports){
 var React = require('react');
 var WikiPoetryActionCreators = require('../../actions/WikiPoetryActionCreators');
 var ReactRouter = require('react-router');
@@ -588,7 +644,7 @@ var Signup = React.createClass({displayName: "Signup",
 
 module.exports = Signup;
 
-},{"../../actions/WikiPoetryActionCreators":1,"./../../api/login":2,"react":240,"react-router":59}],14:[function(require,module,exports){
+},{"../../actions/WikiPoetryActionCreators":1,"./../../api/login":2,"react":240,"react-router":59}],15:[function(require,module,exports){
 var React = require('react');
 var WikiPoetryActionCreators = require('../../actions/WikiPoetryActionCreators');
 var API = require('./../../api/wikiApi');
@@ -622,7 +678,7 @@ var Cartridge = React.createClass({displayName: "Cartridge",
 
 module.exports = Cartridge;
 
-},{"../../actions/WikiPoetryActionCreators":1,"./../../api/wikiApi":3,"react":240}],15:[function(require,module,exports){
+},{"../../actions/WikiPoetryActionCreators":1,"./../../api/wikiApi":3,"react":240}],16:[function(require,module,exports){
 var React = require('react');
 
 var Banner = React.createClass({displayName: "Banner",
@@ -638,7 +694,7 @@ var Banner = React.createClass({displayName: "Banner",
 
 module.exports = Banner;
 
-},{"react":240}],16:[function(require,module,exports){
+},{"react":240}],17:[function(require,module,exports){
 var React = require('react');
 var ReactRouter = require('react-router');
 var Link = ReactRouter.Link;
@@ -694,7 +750,7 @@ var BulletPoint = React.createClass({displayName: "BulletPoint",
 
 module.exports = BulletPoint;
 
-},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"react":240,"react-router":59}],17:[function(require,module,exports){
+},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"react":240,"react-router":59}],18:[function(require,module,exports){
 var React = require('react');
 var BulletPoint = require('./BulletPoint.react');
 var HomeImage = require('./HomeImage.react');
@@ -735,7 +791,7 @@ var DidYouKnow = React.createClass({displayName: "DidYouKnow",
 
 module.exports = DidYouKnow;
 
-},{"./BulletPoint.react":16,"./HomeImage.react":21,"react":240}],18:[function(require,module,exports){
+},{"./BulletPoint.react":17,"./HomeImage.react":22,"react":240}],19:[function(require,module,exports){
 var React = require('react');
 var HomeImage = require('./HomeImage.react');
 var ReactRouter = require('react-router');
@@ -797,7 +853,7 @@ var Featured = React.createClass({displayName: "Featured",
 
 module.exports = Featured;
 
-},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"./HomeImage.react":21,"react":240,"react-router":59}],19:[function(require,module,exports){
+},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"./HomeImage.react":22,"react":240,"react-router":59}],20:[function(require,module,exports){
 var React = require('react');
 var Banner = require('./Banner.react');
 var HomeContent = require('./HomeContent.react');
@@ -821,7 +877,7 @@ var Home = React.createClass({displayName: "Home",
 
 module.exports = Home;
 
-},{"./Banner.react":15,"./HomeContent.react":20,"react":240}],20:[function(require,module,exports){
+},{"./Banner.react":16,"./HomeContent.react":21,"react":240}],21:[function(require,module,exports){
 var React = require('react');
 var Featured = require('./Featured.react');
 var InTheNews = require('./InTheNews.react');
@@ -923,7 +979,7 @@ var HomeContent = React.createClass({displayName: "HomeContent",
 
 module.exports = HomeContent;
 
-},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"./DidYouKnow.react":17,"./Featured.react":18,"./InTheNews.react":22,"./OnThisDay.react":23,"react":240}],21:[function(require,module,exports){
+},{"../../stores/WikiPoetryStore":30,"./../../api/wikiApi":3,"./DidYouKnow.react":18,"./Featured.react":19,"./InTheNews.react":23,"./OnThisDay.react":24,"react":240}],22:[function(require,module,exports){
 var React = require('react');
 
 var HomeImage = React.createClass({displayName: "HomeImage",
@@ -942,7 +998,7 @@ var HomeImage = React.createClass({displayName: "HomeImage",
 
 module.exports = HomeImage;
 
-},{"react":240}],22:[function(require,module,exports){
+},{"react":240}],23:[function(require,module,exports){
 var React = require('react');
 var BulletPoint = require('./BulletPoint.react');
 var HomeImage = require('./HomeImage.react');
@@ -982,7 +1038,7 @@ var InTheNews = React.createClass({displayName: "InTheNews",
 
 module.exports = InTheNews;
 
-},{"./BulletPoint.react":16,"./HomeImage.react":21,"react":240}],23:[function(require,module,exports){
+},{"./BulletPoint.react":17,"./HomeImage.react":22,"react":240}],24:[function(require,module,exports){
 var React = require('react');
 var BulletPoint = require('./BulletPoint.react');
 var HomeImage = require('./HomeImage.react');
@@ -1045,26 +1101,7 @@ var OnThisDay = React.createClass({displayName: "OnThisDay",
 
 module.exports = OnThisDay;
 
-},{"./BulletPoint.react":16,"./HomeImage.react":21,"react":240}],24:[function(require,module,exports){
-//Will display how our neural network is learning and producing outputs
-
-var React = require('react');
-
-var HowItWorks = React.createClass({displayName: "HowItWorks",
-
-  render: function () {
-
-    return (
-      React.createElement("div", null, 
-      "How It Works"
-      )
-    );
-  }
-});
-
-module.exports = HowItWorks;
-
-},{"react":240}],25:[function(require,module,exports){
+},{"./BulletPoint.react":17,"./HomeImage.react":22,"react":240}],25:[function(require,module,exports){
 var React = require('react');
 var ReactRouter = require('react-router');
 var ReactDOM = require('react-dom');
@@ -1126,7 +1163,7 @@ var Search = React.createClass({displayName: "Search",
 
 module.exports = Search;
 
-},{"../../actions/WikiPoetryActionCreators":1,"../../stores/WikiPoetryStore":30,"../article/ArticleSubsection.react":11,"./../../api/wikiApi":3,"react":240,"react-dom":39,"react-router":59}],26:[function(require,module,exports){
+},{"../../actions/WikiPoetryActionCreators":1,"../../stores/WikiPoetryStore":30,"../article/ArticleSubsection.react":12,"./../../api/wikiApi":3,"react":240,"react-dom":39,"react-router":59}],26:[function(require,module,exports){
 
 //Use keyMirror to create values equal to the key
 var keyMirror = require('keymirror');
@@ -1178,7 +1215,6 @@ var Redirect = ReactRouter.Redirect;
 var WikiPoetryApp = require('./components/WikiPoetryApp.react');
 var Home = require('./components/home/Home.react');
 var Article = require('./components/article/Article.react');
-var HowItWorks = require('./components/howitworks/HowItWorks.react');
 var AboutUs = require('./components/aboutus/AboutUs.react');
 var Login = require('./components/auth/Login.react');
 var Signup = require('./components/auth/Signup.react');
@@ -1187,7 +1223,6 @@ var routes = (
   React.createElement(Route, {path: "/", component: WikiPoetryApp}, 
     React.createElement(IndexRoute, {component: Home}), 
     React.createElement(Route, {path: "Article/:term", component: Article}), 
-    React.createElement(Route, {path: "HowItWorks", component: HowItWorks}), 
     React.createElement(Route, {path: "AboutUs", component: AboutUs}), 
     React.createElement(Route, {path: "Login", component: Login}), 
     React.createElement(Route, {path: "Signup", component: Signup}), 
@@ -1197,7 +1232,7 @@ var routes = (
 
 module.exports = routes;
 
-},{"./components/WikiPoetryApp.react":6,"./components/aboutus/AboutUs.react":7,"./components/article/Article.react":8,"./components/auth/Login.react":12,"./components/auth/Signup.react":13,"./components/home/Home.react":19,"./components/howitworks/HowItWorks.react":24,"react":240,"react-router":59}],30:[function(require,module,exports){
+},{"./components/WikiPoetryApp.react":6,"./components/aboutus/AboutUs.react":7,"./components/article/Article.react":8,"./components/auth/Login.react":13,"./components/auth/Signup.react":14,"./components/home/Home.react":20,"react":240,"react-router":59}],30:[function(require,module,exports){
 var WikiPoetryDispatcher = require('../dispatcher/WikiPoetryDispatcher');
 var EventEmitter = require('events').EventEmitter;
 var WikiConstants = require('../constants/WikiConstants');
@@ -11237,6 +11272,7 @@ var keyMirror = function(obj) {
     ret[key] = key;
   }
   return ret;
+
 };
 
 module.exports = keyMirror;
