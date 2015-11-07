@@ -122,6 +122,10 @@ Article Styles
   margin: 3px;
   padding: 3px;
 }
+
+.generate {
+  margin-top: 15px;
+}
 /************************************
 Spinner Styles
 ************************************/
